@@ -92,7 +92,7 @@ serve(async (req: Request) => {
         `\n\nIMPORTANT: The user confirmed the food is "${clarification}". Provide accurate nutritional info specifically for this food. Set status to "confident" and confidence to 0.95.`;
     }
 
-    // Call Groq llama-3.2-11b-vision (free tier: 7000 req/day)
+    // Call Groq Llama 4 Scout vision (free tier: 7000 req/day)
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -100,7 +100,7 @@ serve(async (req: Request) => {
         "Authorization": `Bearer ${GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.2-11b-vision-preview",
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [
           {
             role: "user",
