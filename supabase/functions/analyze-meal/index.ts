@@ -8,11 +8,13 @@ const corsHeaders = {
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 
-const ANALYSIS_PROMPT = `You are a precise nutrition expert AI. Analyze the food in this image and respond with ONLY a raw JSON object — no markdown, no code blocks, no explanation text. Just the JSON.
+const ANALYSIS_PROMPT = `You are a precise nutrition expert AI. Your FIRST job is to determine if the image contains food or drink that a human would eat or consume.
+
+Respond with ONLY a raw JSON object — no markdown, no code blocks, no explanation text. Just the JSON.
 
 Use this exact structure:
 {
-  "status": "confident" or "clarification_needed",
+  "status": "confident" or "clarification_needed" or "no_food_detected",
   "dish_name": "descriptive name of the dish",
   "calories": <integer: total estimated calories for the visible portion>,
   "protein_g": <number: grams of protein>,
@@ -27,6 +29,7 @@ Use this exact structure:
 }
 
 Rules:
+- CRITICAL: If the image does NOT contain food or drink (e.g. landscapes, people, animals, objects, text, screenshots), set status to "no_food_detected", calories to 0, all macros to 0, confidence to 0, dish_name to "No food detected", portion_description to "", and both clarification fields to null. Do NOT guess or hallucinate food.
 - Set status to "clarification_needed" when confidence < 0.7 AND there are visually similar foods with meaningfully different calorie counts (e.g., papaya vs mango, zucchini vs cucumber, chicken vs tofu, brown rice vs white rice, sweet potato vs regular potato)
 - If clarification_needed, provide exactly 2-3 options in clarification_options
 - Estimate calories for the ENTIRE visible portion — never underestimate

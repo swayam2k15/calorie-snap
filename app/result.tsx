@@ -47,6 +47,12 @@ export default function ResultScreen() {
       const typedData = data as AnalysisResult;
       setResult(typedData);
 
+      if (typedData.status === 'no_food_detected') {
+        setErrorMessage("No food detected in this image. Please take a photo of a meal or dish.");
+        setPhase('error');
+        return;
+      }
+
       if (
         typedData.status === 'clarification_needed' &&
         typedData.clarification_options?.length &&

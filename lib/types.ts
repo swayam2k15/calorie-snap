@@ -16,7 +16,7 @@ export interface Meal {
 }
 
 export interface AnalysisResult {
-  status: 'confident' | 'clarification_needed';
+  status: 'confident' | 'clarification_needed' | 'no_food_detected';
   dish_name: string;
   calories: number;
   protein_g: number;
