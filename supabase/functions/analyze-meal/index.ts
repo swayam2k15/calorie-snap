@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 
 const ANALYSIS_PROMPT = `You are a precise nutrition expert AI. Analyze the food in this image and respond with ONLY a raw JSON object — no markdown, no code blocks, no explanation text. Just the JSON.
 
@@ -63,9 +63,9 @@ serve(async (req: Request) => {
       );
     }
 
-    if (!GEMINI_API_KEY) {
+    if (!GROQ_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "GEMINI_API_KEY secret not set on this function" }),
+        JSON.stringify({ error: "GROQ_API_KEY secret not set on this function" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
@@ -92,47 +92,50 @@ serve(async (req: Request) => {
         `\n\nIMPORTANT: The user confirmed the food is "${clarification}". Provide accurate nutritional info specifically for this food. Set status to "confident" and confidence to 0.95.`;
     }
 
-    // Call Gemini 2.0 Flash Lite (free tier: 30 RPM, 1500 RPD)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
-
-    const geminiResponse = await fetch(geminiUrl, {
+    // Call Groq llama-3.2-11b-vision (free tier: 7000 req/day)
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+      },
       body: JSON.stringify({
-        contents: [
+        model: "llama-3.2-11b-vision-preview",
+        messages: [
           {
-            parts: [
+            role: "user",
+            content: [
               {
-                inline_data: {
-                  mime_type: contentType,
-                  data: imageBase64,
+                type: "image_url",
+                image_url: {
+                  url: `data:${contentType};base64,${imageBase64}`,
                 },
               },
-              { text: prompt },
+              {
+                type: "text",
+                text: prompt,
+              },
             ],
           },
         ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 1024,
-        },
+        temperature: 0.1,
+        max_tokens: 1024,
       }),
     });
 
-    if (!geminiResponse.ok) {
-      const errText = await geminiResponse.text();
-      throw new Error(`Gemini API error ${geminiResponse.status}: ${errText}`);
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text();
+      throw new Error(`Groq API error ${groqResponse.status}: ${errText}`);
     }
 
-    const geminiData = await geminiResponse.json();
-    const rawText: string =
-      geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const groqData = await groqResponse.json();
+    const rawText: string = groqData.choices?.[0]?.message?.content ?? "";
 
-    // Strip markdown code fences if Gemini wraps the JSON
+    // Strip markdown code fences if model wraps the JSON
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error(
-        `No JSON found in Gemini response: ${rawText.substring(0, 300)}`,
+        `No JSON found in Groq response: ${rawText.substring(0, 300)}`,
       );
     }
 
